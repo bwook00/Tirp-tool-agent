@@ -1,0 +1,9 @@
+{
+  "first_name": "길동",
+  "last_name": "홍",
+  "date_of_birth": "1990-01-15",
+  "email": "gildong@example.com",
+  "phone": "+82-10-1234-5678",
+  "passport_number": "M12345678",
+  "nationality": "KR"
+}

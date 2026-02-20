@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ result.origin }} → {{ result.destination }} - Tirp</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="result-card">
+      <!-- Header -->
+      <div class="result-header {{ result.transport_type }}">
+        <div class="transport-icon">
+          {% if result.transport_type == "train" %}&#x1F682;{% elif result.transport_type == "flight" %}&#x2708;&#xFE0F;{% else %}&#x1F68C;{% endif %}
+        </div>
+        <div class="route-label">추천 경로</div>
+        <div class="route-cities">
+          {{ result.origin }}<span class="route-arrow">&rarr;</span>{{ result.destination }}
+        </div>
+        {% if result.provider %}
+        <div class="provider-name">{{ result.provider }}</div>
+        {% endif %}
+      </div>
+
+      <!-- Body -->
+      <div class="result-body">
+        <!-- Time row -->
+        <div class="time-row">
+          <div class="time-block">
+            <div class="time-value">{{ result.departure_time.strftime("%H:%M") }}</div>
+            <div class="time-date">{{ result.departure_time.strftime("%m/%d") }} 출발</div>
+          </div>
+          <div class="time-connector">
+            <div class="duration">
+              {% set hours = result.duration_minutes // 60 %}
+              {% set mins = result.duration_minutes % 60 %}
+              {% if hours > 0 %}{{ hours }}시간 {% endif %}{{ mins }}분
+            </div>
+            <div class="line"></div>
+          </div>
+          <div class="time-block">
+            <div class="time-value">{{ result.arrival_time.strftime("%H:%M") }}</div>
+            <div class="time-date">{{ result.arrival_time.strftime("%m/%d") }} 도착</div>
+          </div>
+        </div>
+
+        <!-- Detail grid -->
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">가격</div>
+            <div class="detail-value price">{{ "{:,.0f}".format(result.price) }}{{ result.currency if result.currency != "KRW" else "원" }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">환승</div>
+            <div class="detail-value">{% if result.transfers == 0 %}직통{% else %}{{ result.transfers }}회{% endif %}</div>
+          </div>
+        </div>
+
+        <!-- Score explain -->
+        {% if result.score_explain %}
+        <div class="score-section">
+          <div class="score-title">추천 이유</div>
+          <div class="score-text">{{ result.score_explain }}</div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        {% if is_expired %}
+        <div class="expired-badge">만료됨</div>
+        <button class="btn btn-primary {{ result.transport_type }}" onclick="regenerate('{{ result.result_id }}')">
+          다시 검색
+        </button>
+        {% elif result.checkout_url %}
+        <a href="{{ result.checkout_url }}" target="_blank" rel="noopener" class="btn btn-primary {{ result.transport_type }}">
+          예매하기
+        </a>
+        {% endif %}
+        <button class="btn btn-secondary btn-copy" onclick="copyLink(this)">
+          링크 복사
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function copyLink(btn) {
+      navigator.clipboard.writeText(window.location.href).then(function() {
+        btn.textContent = "복사 완료!";
+        btn.classList.add("copied");
+        setTimeout(function() {
+          btn.textContent = "링크 복사";
+          btn.classList.remove("copied");
+        }, 2000);
+      });
+    }
+
+    function regenerate(resultId) {
+      fetch("/api/results/" + resultId + "/regenerate", {method: "POST"})
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+          if (data.response_id) {
+            window.location.href = "/wait?ref=" + data.response_id;
+          }
+        });
+    }
+  </script>
+</body>
+</html>

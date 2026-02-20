@@ -1,0 +1,300 @@
+/* ========== Reset & Base ========== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background: #f5f6f8;
+  color: #1a1a1a;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ========== Layout ========== */
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  min-height: 100dvh;
+}
+
+/* ========== Result Page ========== */
+.result-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* -- Header -- */
+.result-header {
+  padding: 24px 20px 20px;
+  text-align: center;
+  color: #fff;
+}
+
+.result-header.train {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+.result-header.flight {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+}
+.result-header.bus {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.transport-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.route-label {
+  font-size: 14px;
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.route-cities {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.route-arrow {
+  margin: 0 8px;
+  opacity: 0.7;
+}
+
+.provider-name {
+  margin-top: 8px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+/* -- Body -- */
+.result-body {
+  padding: 20px;
+}
+
+.time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.time-block {
+  text-align: center;
+  flex: 1;
+}
+
+.time-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.time-date {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.time-connector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.time-connector .line {
+  width: 60px;
+  height: 2px;
+  background: #d1d5db;
+  position: relative;
+}
+
+.time-connector .line::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: -3px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid #d1d5db;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.time-connector .duration {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* -- Detail rows -- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  background: #f9fafb;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.detail-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.detail-value.price {
+  color: #2563eb;
+}
+
+/* -- Score explain -- */
+.score-section {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.score-title {
+  font-size: 12px;
+  color: #0369a1;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.score-text {
+  font-size: 14px;
+  color: #0c4a6e;
+}
+
+/* -- Buttons -- */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 24px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.btn:hover {
+  opacity: 0.9;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+.btn-primary.train {
+  background: #2563eb;
+}
+.btn-primary.flight {
+  background: #7c3aed;
+}
+.btn-primary.bus {
+  background: #059669;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-copy.copied {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* -- Expired badge -- */
+.expired-badge {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* ========== Error Page ========== */
+.error-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  padding: 48px 24px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.error-code {
+  font-size: 64px;
+  font-weight: 800;
+  color: #d1d5db;
+  line-height: 1;
+}
+
+.error-message {
+  margin-top: 12px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.error-back {
+  margin-top: 24px;
+  display: inline-block;
+  padding: 12px 24px;
+  background: #f3f4f6;
+  color: #374151;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+.error-back:hover {
+  background: #e5e7eb;
+}
+
+/* ========== Responsive ========== */
+@media (min-width: 640px) {
+  .container {
+    padding: 40px 16px;
+  }
+  .route-cities {
+    font-size: 26px;
+  }
+  .time-value {
+    font-size: 28px;
+  }
+}
