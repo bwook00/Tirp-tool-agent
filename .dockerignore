@@ -1,0 +1,14 @@
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.git/
+.gitignore
+.env
+data/results/
+data/debug/
+.idea/
+.vscode/
+.DS_Store
+*.md
+tests/
