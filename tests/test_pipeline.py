@@ -45,12 +45,6 @@ def _mock_bus_results(**kwargs) -> list[TransitOption]:
     ]
 
 
-_SEARCH_PATCHES = [
-    patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results),
-    patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results),
-]
-
-
 def _make_travel_request(
     response_id: str = "resp_pipeline_test",
     origin: str = "서울",
@@ -104,7 +98,7 @@ def _clean_state():
 
 
 class TestAgentProcessing:
-    """Test that the pipeline processes requests via the real agent."""
+    """Test that the pipeline processes requests via the agent."""
 
     @pytest.mark.anyio
     async def test_status_transitions_to_done(self):

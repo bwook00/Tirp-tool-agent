@@ -7,7 +7,6 @@ from app.models.schemas import TransitOption, TransportType
 from app.tools.train_search import search_trains
 from app.tools.bus_search import search_buses
 from app.tools.checkout import get_checkout_link
-from app.tools import TOOL_DEFINITIONS, execute_tool
 
 
 # ---------------------------------------------------------------------------
@@ -153,76 +152,3 @@ async def test_get_checkout_link_deep_link():
     )
     result = await get_checkout_link(option)
     assert result["checkout_url"] == "https://www.omio.com/booking/12345"
-
-
-# ---------------------------------------------------------------------------
-# TOOL_DEFINITIONS
-# ---------------------------------------------------------------------------
-
-def test_tool_definitions_count():
-    assert len(TOOL_DEFINITIONS) == 3
-
-
-def test_tool_definitions_structure():
-    for defn in TOOL_DEFINITIONS:
-        assert "name" in defn
-        assert "description" in defn
-        assert "input_schema" in defn
-        schema = defn["input_schema"]
-        assert schema["type"] == "object"
-        assert "properties" in schema
-        assert "required" in schema
-
-
-def test_tool_definitions_names():
-    names = {d["name"] for d in TOOL_DEFINITIONS}
-    assert names == {"search_trains", "search_buses", "get_checkout_link"}
-
-
-# ---------------------------------------------------------------------------
-# execute_tool dispatcher
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-@patch("app.tools.train_search.search_hafas", new_callable=AsyncMock, return_value=_MOCK_HAFAS_RESULTS)
-async def test_execute_tool_search_trains(mock_hafas):
-    results = await execute_tool("search_trains", {
-        "origin": "Berlin",
-        "destination": "Munich",
-        "date": "2026-03-15",
-    })
-    assert isinstance(results, list)
-    assert len(results) == 2
-    assert all(isinstance(r, TransitOption) for r in results)
-
-
-@pytest.mark.asyncio
-@patch("app.tools.bus_search.search_hafas", new_callable=AsyncMock, return_value=_MOCK_HAFAS_RESULTS)
-async def test_execute_tool_search_buses(mock_hafas):
-    results = await execute_tool("search_buses", {
-        "origin": "Berlin",
-        "destination": "Munich",
-        "date": "2026-03-15",
-    })
-    assert isinstance(results, list)
-    assert len(results) == 1
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_get_checkout_link():
-    result = await execute_tool("get_checkout_link", {
-        "transport_type": "train",
-        "provider": "Deutsche Bahn",
-        "departure_time": "2026-03-15T10:00:00",
-        "arrival_time": "2026-03-15T12:35:00",
-        "duration_minutes": 155,
-        "price": 59.90,
-    })
-    assert "checkout_url" in result
-    assert "expires_at" in result
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_unknown():
-    with pytest.raises(ValueError, match="Unknown tool"):
-        await execute_tool("nonexistent_tool", {})

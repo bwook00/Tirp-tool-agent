@@ -2,7 +2,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    anthropic_api_key: str = ""
     tally_signing_secret: str = ""
     data_dir: str = "./data/results"
     passengers_dir: str = "./data/passengers"

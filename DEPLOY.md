@@ -95,10 +95,8 @@ Railway가 자동으로 Dockerfile을 감지하고 빌드를 시작합니다.
 | 변수 이름 | 값 | 필수 여부 | 설명 |
 |-----------|-----|-----------|------|
 | `TALLY_SIGNING_SECRET` | Tally에서 발급받은 시크릿 | 선택 | 웹훅 서명 검증용 |
-| `ANTHROPIC_API_KEY` | Claude API 키 | 선택 | AI 추천 고도화 (없으면 기본 스코어링 사용) |
 
-> `ANTHROPIC_API_KEY`가 없어도 서비스는 정상 작동합니다.
-> 이 경우 Omio에서 검색한 결과를 자체 스코어링 로직으로 평가합니다.
+> **API 키가 필요 없습니다!** 교통편 검색은 무료 HAFAS API(DB transport.rest)를 사용합니다.
 
 4. 변수 추가 후 Railway가 자동으로 재배포합니다.
 

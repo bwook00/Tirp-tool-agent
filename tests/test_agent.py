@@ -278,11 +278,11 @@ class TestScoringEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# Agent: fallback (no API key)
+# Agent: HAFAS search → score → recommend
 # ---------------------------------------------------------------------------
 
 def _mock_train_results(**kwargs) -> list[TransitOption]:
-    """Return mock train results for fallback tests."""
+    """Return mock train results for agent tests."""
     return [
         TransitOption(
             transport_type=TransportType.train,
@@ -308,7 +308,7 @@ def _mock_train_results(**kwargs) -> list[TransitOption]:
 
 
 def _mock_bus_results(**kwargs) -> list[TransitOption]:
-    """Return mock bus results for fallback tests."""
+    """Return mock bus results for agent tests."""
     return [
         TransitOption(
             transport_type=TransportType.bus,
@@ -333,23 +333,15 @@ def _mock_bus_results(**kwargs) -> list[TransitOption]:
     ]
 
 
-class TestAgentFallback:
-    """Test agent fallback mode (no API key).
-
-    search_trains and search_buses are mocked because they now depend on
-    Omio Playwright scraping, which requires installed browsers.
-    """
+class TestAgent:
+    """Test agent: HAFAS search → score → recommend."""
 
     @pytest.mark.asyncio
-    async def test_run_agent_fallback_returns_recommendation(self):
-        """With no API key, agent should use fallback and return a valid result."""
+    @patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results)
+    @patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results)
+    async def test_run_agent_returns_recommendation(self, mock_buses, mock_trains):
         request = _make_request()
-
-        with patch("app.core.agent.settings") as mock_settings, \
-             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
-             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
-            mock_settings.anthropic_api_key = ""
-            result = await run_agent(request)
+        result = await run_agent(request)
 
         assert isinstance(result, RecommendationResult)
         assert result.response_id == "test-response-001"
@@ -363,40 +355,31 @@ class TestAgentFallback:
         assert result.price > 0
 
     @pytest.mark.asyncio
-    async def test_run_agent_fallback_fastest(self):
-        """Fallback with fastest preference should pick a short-duration option."""
+    @patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results)
+    @patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results)
+    async def test_run_agent_fastest(self, mock_buses, mock_trains):
         request = _make_request(
             preferences=Preferences(primary_goal=PrimaryGoal.fastest),
         )
+        result = await run_agent(request)
 
-        with patch("app.core.agent.settings") as mock_settings, \
-             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
-             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
-            mock_settings.anthropic_api_key = ""
-            result = await run_agent(request)
-
-        # Flights are typically the fastest for Seoul→Busan
         assert result.duration_minutes <= 200
 
     @pytest.mark.asyncio
-    async def test_run_agent_fallback_cheapest(self):
-        """Fallback with cheapest preference should pick a low-price option."""
+    @patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results)
+    @patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results)
+    async def test_run_agent_cheapest(self, mock_buses, mock_trains):
         request = _make_request(
             preferences=Preferences(primary_goal=PrimaryGoal.cheapest),
         )
+        result = await run_agent(request)
 
-        with patch("app.core.agent.settings") as mock_settings, \
-             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
-             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
-            mock_settings.anthropic_api_key = ""
-            result = await run_agent(request)
-
-        # Buses are typically the cheapest for Seoul→Busan
         assert result.price <= 40000
 
     @pytest.mark.asyncio
-    async def test_run_agent_fallback_different_preferences_different_results(self):
-        """Different preferences should produce different top picks."""
+    @patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results)
+    @patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results)
+    async def test_run_agent_different_preferences(self, mock_buses, mock_trains):
         req_fast = _make_request(
             preferences=Preferences(primary_goal=PrimaryGoal.fastest),
         )
@@ -404,28 +387,18 @@ class TestAgentFallback:
             preferences=Preferences(primary_goal=PrimaryGoal.cheapest),
         )
 
-        with patch("app.core.agent.settings") as mock_settings, \
-             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
-             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
-            mock_settings.anthropic_api_key = ""
-            result_fast = await run_agent(req_fast)
-            result_cheap = await run_agent(req_cheap)
+        result_fast = await run_agent(req_fast)
+        result_cheap = await run_agent(req_cheap)
 
-        # The fastest and cheapest should generally differ
-        # At minimum, they should both be valid results
         assert isinstance(result_fast, RecommendationResult)
         assert isinstance(result_cheap, RecommendationResult)
 
     @pytest.mark.asyncio
-    async def test_run_agent_fallback_has_checkout_url(self):
-        """Fallback result should include a valid checkout URL."""
+    @patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results)
+    @patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results)
+    async def test_run_agent_has_checkout_url(self, mock_buses, mock_trains):
         request = _make_request()
-
-        with patch("app.core.agent.settings") as mock_settings, \
-             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
-             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
-            mock_settings.anthropic_api_key = ""
-            result = await run_agent(request)
+        result = await run_agent(request)
 
         assert result.checkout_url.startswith("https://")
         assert result.expires_at is not None
