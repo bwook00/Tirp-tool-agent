@@ -1,5 +1,5 @@
-from datetime import datetime
-from unittest.mock import patch
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -281,13 +281,74 @@ class TestScoringEdgeCases:
 # Agent: fallback (no API key)
 # ---------------------------------------------------------------------------
 
+def _mock_train_results(**kwargs) -> list[TransitOption]:
+    """Return mock train results for fallback tests."""
+    return [
+        TransitOption(
+            transport_type=TransportType.train,
+            provider="KTX",
+            departure_time=datetime(2026, 3, 15, 10, 0),
+            arrival_time=datetime(2026, 3, 15, 12, 35),
+            duration_minutes=155,
+            price=59800.0,
+            currency="KRW",
+            transfers=0,
+        ),
+        TransitOption(
+            transport_type=TransportType.train,
+            provider="SRT",
+            departure_time=datetime(2026, 3, 15, 12, 0),
+            arrival_time=datetime(2026, 3, 15, 14, 30),
+            duration_minutes=150,
+            price=52600.0,
+            currency="KRW",
+            transfers=0,
+        ),
+    ]
+
+
+def _mock_bus_results(**kwargs) -> list[TransitOption]:
+    """Return mock bus results for fallback tests."""
+    return [
+        TransitOption(
+            transport_type=TransportType.bus,
+            provider="고속버스 우등",
+            departure_time=datetime(2026, 3, 15, 8, 0),
+            arrival_time=datetime(2026, 3, 15, 12, 20),
+            duration_minutes=260,
+            price=34200.0,
+            currency="KRW",
+            transfers=0,
+        ),
+        TransitOption(
+            transport_type=TransportType.bus,
+            provider="고속버스 일반",
+            departure_time=datetime(2026, 3, 15, 10, 0),
+            arrival_time=datetime(2026, 3, 15, 14, 30),
+            duration_minutes=270,
+            price=23000.0,
+            currency="KRW",
+            transfers=0,
+        ),
+    ]
+
+
 class TestAgentFallback:
+    """Test agent fallback mode (no API key).
+
+    search_trains and search_buses are mocked because they now depend on
+    Omio Playwright scraping, which requires installed browsers.
+    search_flights still uses its built-in mock data.
+    """
+
     @pytest.mark.asyncio
     async def test_run_agent_fallback_returns_recommendation(self):
         """With no API key, agent should use fallback and return a valid result."""
         request = _make_request()
 
-        with patch("app.core.agent.settings") as mock_settings:
+        with patch("app.core.agent.settings") as mock_settings, \
+             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
             mock_settings.anthropic_api_key = ""
             result = await run_agent(request)
 
@@ -309,7 +370,9 @@ class TestAgentFallback:
             preferences=Preferences(primary_goal=PrimaryGoal.fastest),
         )
 
-        with patch("app.core.agent.settings") as mock_settings:
+        with patch("app.core.agent.settings") as mock_settings, \
+             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
             mock_settings.anthropic_api_key = ""
             result = await run_agent(request)
 
@@ -323,7 +386,9 @@ class TestAgentFallback:
             preferences=Preferences(primary_goal=PrimaryGoal.cheapest),
         )
 
-        with patch("app.core.agent.settings") as mock_settings:
+        with patch("app.core.agent.settings") as mock_settings, \
+             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
             mock_settings.anthropic_api_key = ""
             result = await run_agent(request)
 
@@ -340,7 +405,9 @@ class TestAgentFallback:
             preferences=Preferences(primary_goal=PrimaryGoal.cheapest),
         )
 
-        with patch("app.core.agent.settings") as mock_settings:
+        with patch("app.core.agent.settings") as mock_settings, \
+             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
             mock_settings.anthropic_api_key = ""
             result_fast = await run_agent(req_fast)
             result_cheap = await run_agent(req_cheap)
@@ -355,7 +422,9 @@ class TestAgentFallback:
         """Fallback result should include a valid checkout URL."""
         request = _make_request()
 
-        with patch("app.core.agent.settings") as mock_settings:
+        with patch("app.core.agent.settings") as mock_settings, \
+             patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+             patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
             mock_settings.anthropic_api_key = ""
             result = await run_agent(request)
 

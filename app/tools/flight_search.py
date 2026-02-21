@@ -1,3 +1,7 @@
+# TODO: Replace mock data with Skyscanner API integration (GitHub Issue #25)
+# Currently returns hardcoded mock data. search_trains and search_buses
+# have been migrated to real Omio scraping.
+
 import logging
 import random
 from datetime import datetime, timedelta

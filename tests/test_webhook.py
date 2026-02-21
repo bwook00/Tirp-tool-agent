@@ -198,3 +198,48 @@ class TestHmacSignature:
         payload = _make_payload()
         resp = client.post("/webhook/typeform", json=payload)
         assert resp.status_code == 200
+
+
+class TestRealTypeformUuidRefs:
+    """실제 Typeform UUID ref가 올바르게 매핑되는지 검증."""
+
+    def test_uuid_refs_parsed(self):
+        payload = {
+            "event_id": "evt_real",
+            "event_type": "form_response",
+            "form_response": {
+                "token": "resp_uuid_test",
+                "submitted_at": "2026-03-01T10:00:00Z",
+                "answers": [
+                    {"field": {"ref": "266b4321-10e3-41c7-b57a-3e4580e0d2ee"}, "type": "text", "text": "Berlin"},
+                    {"field": {"ref": "7b71eb98-4948-4512-a163-81990eb0ae27"}, "type": "text", "text": "Munich"},
+                    {"field": {"ref": "f6450ff4-84de-42fe-b6be-d6939d607460"}, "type": "date", "date": "2026-04-01"},
+                    {"field": {"ref": "9cd84c38-78f8-4657-bfd8-e8c96be31b08"}, "type": "number", "number": 2},
+                    {"field": {"ref": "caf55741-e5f8-4a2d-a853-27e7daa940e3"}, "type": "email", "email": "test@example.com"},
+                    {"field": {"ref": "9d20f008-2eef-45b6-8b1a-f2f47edc7520"}, "type": "text", "text": "14:00"},
+                    {"field": {"ref": "d978dc48-4477-40f5-974c-b326625d783b"}, "type": "choice", "choice": {"label": "cheapest"}},
+                ],
+            },
+        }
+        resp = client.post("/webhook/typeform", json=payload)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["response_id"] == "resp_uuid_test"
+
+    def test_uuid_refs_missing_required_field(self):
+        """UUID ref payload에서 필수 필드 누락 시 422 반환."""
+        payload = {
+            "event_id": "evt_real",
+            "event_type": "form_response",
+            "form_response": {
+                "token": "resp_uuid_missing",
+                "submitted_at": "2026-03-01T10:00:00Z",
+                "answers": [
+                    {"field": {"ref": "266b4321-10e3-41c7-b57a-3e4580e0d2ee"}, "type": "text", "text": "Berlin"},
+                    # destination 누락
+                    {"field": {"ref": "f6450ff4-84de-42fe-b6be-d6939d607460"}, "type": "date", "date": "2026-04-01"},
+                ],
+            },
+        }
+        resp = client.post("/webhook/typeform", json=payload)
+        assert resp.status_code == 422

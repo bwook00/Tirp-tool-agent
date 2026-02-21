@@ -19,7 +19,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_trains",
         "description": (
-            "Search for train options (KTX, SRT, etc.) between two Korean cities. "
+            "Search for train options between two cities via Omio. "
             "Returns a list of available trains with departure/arrival times, prices, and duration."
         ),
         "input_schema": {
@@ -27,11 +27,11 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "properties": {
                 "origin": {
                     "type": "string",
-                    "description": "Departure city in Korean (e.g. '서울')",
+                    "description": "Departure city (e.g. 'Berlin', 'Paris')",
                 },
                 "destination": {
                     "type": "string",
-                    "description": "Arrival city in Korean (e.g. '부산')",
+                    "description": "Arrival city (e.g. 'Munich', 'Amsterdam')",
                 },
                 "date": {
                     "type": "string",
@@ -48,19 +48,20 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_flights",
         "description": (
-            "Search for flight options between two Korean cities. "
-            "Returns a list of available flights with departure/arrival times, prices, and duration."
+            "Search for flight options between two cities. "
+            "Returns a list of available flights with departure/arrival times, prices, and duration. "
+            "(Currently returns mock data; Skyscanner integration planned.)"
         ),
         "input_schema": {
             "type": "object",
             "properties": {
                 "origin": {
                     "type": "string",
-                    "description": "Departure city in Korean (e.g. '서울')",
+                    "description": "Departure city (e.g. 'Berlin', 'London')",
                 },
                 "destination": {
                     "type": "string",
-                    "description": "Arrival city in Korean (e.g. '부산')",
+                    "description": "Arrival city (e.g. 'Paris', 'Rome')",
                 },
                 "date": {
                     "type": "string",
@@ -77,7 +78,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_buses",
         "description": (
-            "Search for bus options (고속버스, 시외버스) between two Korean cities. "
+            "Search for bus options between two cities via Omio. "
             "Returns a list of available buses with departure/arrival times, prices, and duration."
         ),
         "input_schema": {
@@ -85,11 +86,11 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "properties": {
                 "origin": {
                     "type": "string",
-                    "description": "Departure city in Korean (e.g. '서울')",
+                    "description": "Departure city (e.g. 'Berlin', 'Prague')",
                 },
                 "destination": {
                     "type": "string",
-                    "description": "Arrival city in Korean (e.g. '부산')",
+                    "description": "Arrival city (e.g. 'Munich', 'Vienna')",
                 },
                 "date": {
                     "type": "string",
@@ -119,7 +120,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 },
                 "provider": {
                     "type": "string",
-                    "description": "Provider name (e.g. 'KTX', '대한항공')",
+                    "description": "Provider name (e.g. 'Deutsche Bahn', 'FlixBus')",
                 },
                 "departure_time": {
                     "type": "string",
@@ -135,11 +136,11 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 },
                 "price": {
                     "type": "number",
-                    "description": "Price in KRW",
+                    "description": "Price amount",
                 },
                 "currency": {
                     "type": "string",
-                    "description": "Currency code (default: KRW)",
+                    "description": "Currency code (default: EUR)",
                 },
                 "transfers": {
                     "type": "integer",
