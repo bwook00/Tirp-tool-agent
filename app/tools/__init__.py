@@ -17,7 +17,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_trains",
         "description": (
-            "Search for train options between two cities via Omio. "
+            "Search for train options between two cities via HAFAS (DB transport.rest). "
             "Returns a list of available trains with departure/arrival times, prices, and duration."
         ),
         "input_schema": {
@@ -46,7 +46,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_buses",
         "description": (
-            "Search for bus options between two cities via Omio. "
+            "Search for bus options between two cities via HAFAS (DB transport.rest). "
             "Returns a list of available buses with departure/arrival times, prices, and duration."
         ),
         "input_schema": {

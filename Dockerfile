@@ -5,9 +5,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright Chromium with ALL system dependencies automatically
-RUN playwright install --with-deps chromium
-
 COPY . .
 
 # Create data directories
