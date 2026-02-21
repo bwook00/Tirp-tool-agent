@@ -55,7 +55,7 @@ class TransitOption(BaseModel):
     arrival_time: datetime
     duration_minutes: int
     price: float
-    currency: str = "KRW"
+    currency: str = "EUR"
     transfers: int = 0
     details: str = ""
 
@@ -77,7 +77,7 @@ class RecommendationResult(BaseModel):
     arrival_time: datetime
     duration_minutes: int
     price: float
-    currency: str = "KRW"
+    currency: str = "EUR"
     transfers: int = 0
     checkout_url: str = ""
     score_explain: str = ""

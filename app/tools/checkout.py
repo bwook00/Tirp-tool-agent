@@ -8,23 +8,32 @@ from app.models.schemas import TransitOption, TransportType
 logger = logging.getLogger(__name__)
 
 _BOOKING_URLS: dict[str, str] = {
-    # Trains
-    "KTX": "https://www.letskorail.com/ebizbf/EbizBfTicketSearch.do",
-    "KTX-산천": "https://www.letskorail.com/ebizbf/EbizBfTicketSearch.do",
-    "SRT": "https://etk.srail.kr/hpg/hra/01/selectScheduleList.do",
-    "무궁화호": "https://www.letskorail.com/ebizbf/EbizBfTicketSearch.do",
-    # Flights
-    "대한항공": "https://www.koreanair.com/booking/search",
-    "아시아나항공": "https://flyasiana.com/C/KR/KO/booking",
-    "진에어": "https://www.jinair.com/booking/index",
-    "제주항공": "https://www.jejuair.net/ko/main/booking",
-    "티웨이항공": "https://www.twayair.com/booking/search",
-    "에어부산": "https://www.airbusan.com/booking/search",
-    # Buses
-    "고속버스 우등": "https://www.kobus.co.kr/mrs/rotinf.do",
-    "고속버스 프리미엄": "https://www.kobus.co.kr/mrs/rotinf.do",
-    "고속버스 일반": "https://www.kobus.co.kr/mrs/rotinf.do",
-    "시외버스": "https://www.bustago.or.kr/newweb/search",
+    # European train operators
+    "Deutsche Bahn": "https://www.bahn.de/buchung/start",
+    "DB": "https://www.bahn.de/buchung/start",
+    "ICE": "https://www.bahn.de/buchung/start",
+    "SNCF": "https://www.sncf-connect.com/en-en/train-booking",
+    "TGV": "https://www.sncf-connect.com/en-en/train-booking",
+    "OUIGO": "https://www.ouigo.com/en/search",
+    "Trenitalia": "https://www.trenitalia.com/en/buying-your-ticket.html",
+    "Frecciarossa": "https://www.trenitalia.com/en/buying-your-ticket.html",
+    "Italo": "https://www.italotreno.it/en/booking",
+    "Renfe": "https://www.renfe.com/en/en/booking",
+    "Eurostar": "https://www.eurostar.com/en-gb/booking",
+    "Thalys": "https://www.thalys.com/en/booking",
+    "SBB": "https://www.sbb.ch/en/buying/pages/fahrplan/fahrplan.xhtml",
+    "OBB": "https://shop.oebb.at/en/ticket",
+    "RailJet": "https://shop.oebb.at/en/ticket",
+    "NS": "https://www.ns.nl/en/journeyplanner",
+    "PKP": "https://www.intercity.pl/en/booking",
+    "Czech Railways": "https://www.cd.cz/en/booking",
+    "RegioJet": "https://www.regiojet.com/search",
+    # European bus operators
+    "FlixBus": "https://www.flixbus.com/bus-routes",
+    "FlixTrain": "https://www.flixtrain.com/train-routes",
+    "BlaBlaBus": "https://www.blablacar.com/bus",
+    # Default
+    "Omio": "https://www.omio.com/search",
 }
 
 _CHECKOUT_EXPIRY_MINUTES = 30
@@ -33,15 +42,25 @@ _CHECKOUT_EXPIRY_MINUTES = 30
 async def get_checkout_link(option: TransitOption) -> dict:
     """Generate a checkout/booking link for the given transit option.
 
+    If the option's `details` field contains a deep link (from the API),
+    use it directly.  Otherwise construct a booking URL from the provider.
+
     Returns a dict with:
-        - checkout_url: a realistic booking URL for the provider
+        - checkout_url: a booking URL for the provider
         - expires_at: ISO-format datetime string, 30 minutes from now
     """
     try:
-        base_url = _BOOKING_URLS.get(option.provider, _default_url(option.transport_type))
-        booking_ref = uuid.uuid4().hex[:12]
-        dep_str = option.departure_time.strftime("%Y%m%dT%H%M")
-        checkout_url = f"{base_url}?ref={booking_ref}&dep={quote(dep_str)}"
+        # Prefer deep link from Omio API
+        if option.details and option.details.startswith("http"):
+            checkout_url = option.details
+        else:
+            base_url = _BOOKING_URLS.get(
+                option.provider,
+                _default_url(option.transport_type),
+            )
+            booking_ref = uuid.uuid4().hex[:12]
+            dep_str = option.departure_time.strftime("%Y%m%dT%H%M")
+            checkout_url = f"{base_url}?ref={booking_ref}&dep={quote(dep_str)}"
 
         expires_at = datetime.utcnow() + timedelta(minutes=_CHECKOUT_EXPIRY_MINUTES)
 
@@ -60,8 +79,8 @@ async def get_checkout_link(option: TransitOption) -> dict:
 
 def _default_url(transport_type: TransportType) -> str:
     defaults = {
-        TransportType.train: "https://www.letskorail.com/ebizbf/EbizBfTicketSearch.do",
-        TransportType.flight: "https://www.koreanair.com/booking/search",
-        TransportType.bus: "https://www.kobus.co.kr/mrs/rotinf.do",
+        TransportType.train: "https://www.omio.com/trains",
+        TransportType.bus: "https://www.omio.com/buses",
+        TransportType.flight: "https://www.omio.com/flights",
     }
-    return defaults.get(transport_type, "https://www.kobus.co.kr/mrs/rotinf.do")
+    return defaults.get(transport_type, "https://www.omio.com/search")

@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 _SYSTEM_PROMPT = (
     "당신은 유럽 긴급 교통편 추천 에이전트입니다. "
     "사용자의 여행 정보를 바탕으로 Omio에서 열차와 버스를 검색하여 최적의 대안을 찾아주세요. "
-    "반드시 search_trains, search_buses 도구를 모두 호출하여 가능한 모든 옵션을 수집하세요. "
-    "search_flights 도구는 사용하지 마세요."
+    "반드시 search_trains, search_buses 도구를 모두 호출하여 가능한 모든 옵션을 수집하세요."
 )
 
 _MAX_TOOL_ROUNDS = 10
