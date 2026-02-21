@@ -10,7 +10,7 @@
   var titleEl = document.getElementById("wait-title");
 
   var POLL_INTERVAL = 3000;
-  var TIMEOUT = 60000;
+  var TIMEOUT = 180000;
   var startTime = Date.now();
   var timerId = null;
 
@@ -18,6 +18,13 @@
     pending: "요청을 접수했습니다...",
     processing: "교통편을 검색하고 있습니다..."
   };
+
+  function pollUrl() {
+    if (responseId) {
+      return "/api/status/" + encodeURIComponent(responseId);
+    }
+    return "/api/status/latest";
+  }
 
   function showError(message) {
     if (spinnerEl) spinnerEl.style.display = "none";
@@ -36,10 +43,10 @@
       return;
     }
 
-    fetch("/api/status/" + encodeURIComponent(responseId))
+    fetch(pollUrl())
       .then(function (res) {
         if (res.status === 404) {
-          if (statusEl) statusEl.textContent = STATUS_MESSAGES.pending;
+          if (statusEl) statusEl.textContent = "요청을 기다리고 있습니다...";
           return null;
         }
         if (!res.ok) throw new Error("서버 오류 (" + res.status + ")");
@@ -47,6 +54,11 @@
       })
       .then(function (data) {
         if (!data) return;
+
+        // Auto-discover response_id from latest endpoint
+        if (!responseId && data.response_id) {
+          responseId = data.response_id;
+        }
 
         if (data.status === "done" && data.result_id) {
           stopPolling();
@@ -77,8 +89,6 @@
     }
   }
 
-  if (responseId) {
-    poll();
-    timerId = setInterval(poll, POLL_INTERVAL);
-  }
+  poll();
+  timerId = setInterval(poll, POLL_INTERVAL);
 })();

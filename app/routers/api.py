@@ -1,7 +1,7 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.core.pipeline import process_travel_request
-from app.core.storage import get_status, load_result, save_result
+from app.core.storage import get_latest_active_response_id, get_status, load_result, save_result
 from app.models.schemas import RecommendationResult, TravelRequest
 
 router = APIRouter(prefix="/api", tags=["api"])
@@ -19,6 +19,17 @@ async def get_result(result_id: str) -> RecommendationResult:
     if result is None:
         raise HTTPException(status_code=404, detail="Result not found")
     return result
+
+
+@router.get("/status/latest")
+async def get_latest_status():
+    response_id = await get_latest_active_response_id()
+    if response_id is None:
+        raise HTTPException(status_code=404, detail="No active request found")
+    status = await get_status(response_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Status not found")
+    return status
 
 
 @router.get("/status/{response_id}")

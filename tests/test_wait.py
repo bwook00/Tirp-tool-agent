@@ -28,30 +28,36 @@ def test_wait_with_ref_returns_200():
     assert "처리 중" in response.text
 
 
-def test_wait_without_ref_no_active_returns_404():
+def test_wait_without_ref_returns_200():
+    """Without ref, /wait still renders the waiting page (polls /api/status/latest)."""
     response = client.get("/wait")
+    assert response.status_code == 200
+    assert "/static/js/poll.js" in response.text
+
+
+def test_wait_without_ref_has_empty_response_id():
+    response = client.get("/wait")
+    assert response.status_code == 200
+    assert 'data-response-id=""' in response.text
+
+
+def test_api_status_latest_no_active_returns_404():
+    response = client.get("/api/status/latest")
     assert response.status_code == 404
-    assert "처리 중인 요청이 없습니다" in response.text
 
 
-def test_wait_without_ref_finds_active_request():
+def test_api_status_latest_finds_active_request():
     asyncio.run(set_status("auto-found-123", status="processing"))
-    response = client.get("/wait")
+    response = client.get("/api/status/latest")
     assert response.status_code == 200
-    assert "auto-found-123" in response.text
+    body = response.json()
+    assert body["response_id"] == "auto-found-123"
+    assert body["status"] == "processing"
 
 
-def test_wait_without_ref_picks_latest_active():
-    asyncio.run(set_status("old-req", status="pending"))
-    asyncio.run(set_status("new-req", status="processing"))
-    response = client.get("/wait")
-    assert response.status_code == 200
-    assert "new-req" in response.text
-
-
-def test_wait_without_ref_ignores_done_status():
+def test_api_status_latest_ignores_done():
     asyncio.run(set_status("done-req", status="done", result_id="some-result"))
-    response = client.get("/wait")
+    response = client.get("/api/status/latest")
     assert response.status_code == 404
 
 
