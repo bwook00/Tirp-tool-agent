@@ -17,8 +17,68 @@ _BASE_URL = "https://v6.db.transport.rest"
 _TIMEOUT = 20
 _MAX_RESULTS = 10
 
+# Korean → English city name mapping (HAFAS only understands Latin names)
+_CITY_TRANSLATE: dict[str, str] = {
+    "파리": "Paris",
+    "베를린": "Berlin",
+    "뮌헨": "Munich",
+    "함부르크": "Hamburg",
+    "프랑크푸르트": "Frankfurt",
+    "암스테르담": "Amsterdam",
+    "브뤼셀": "Brussels",
+    "런던": "London",
+    "로마": "Rome",
+    "밀라노": "Milan",
+    "바르셀로나": "Barcelona",
+    "마드리드": "Madrid",
+    "비엔나": "Vienna",
+    "빈": "Vienna",
+    "취리히": "Zurich",
+    "프라하": "Prague",
+    "바르샤바": "Warsaw",
+    "부다페스트": "Budapest",
+    "바젤": "Basel",
+    "쾰른": "Cologne",
+    "뒤셀도르프": "Dusseldorf",
+    "슈투트가르트": "Stuttgart",
+    "드레스덴": "Dresden",
+    "라이프치히": "Leipzig",
+    "리옹": "Lyon",
+    "마르세유": "Marseille",
+    "니스": "Nice",
+    "스트라스부르": "Strasbourg",
+    "제네바": "Geneva",
+    "베른": "Bern",
+    "루체른": "Lucerne",
+    "인터라켄": "Interlaken",
+    "피렌체": "Florence",
+    "베네치아": "Venice",
+    "나폴리": "Naples",
+    "리스본": "Lisbon",
+    "포르투": "Porto",
+    "코펜하겐": "Copenhagen",
+    "스톡홀름": "Stockholm",
+    "오슬로": "Oslo",
+    "헬싱키": "Helsinki",
+    "뉘른베르크": "Nuremberg",
+    "잘츠부르크": "Salzburg",
+    "인스브루크": "Innsbruck",
+    "그라츠": "Graz",
+    "브라티슬라바": "Bratislava",
+    "크라쿠프": "Krakow",
+    "부쿠레슈티": "Bucharest",
+    "소피아": "Sofia",
+    "아테네": "Athens",
+    "이스탄불": "Istanbul",
+}
+
 # Location cache: city name -> station ID
 _location_cache: dict[str, str] = {}
+
+
+def _normalize_city(name: str) -> str:
+    """Translate Korean city names to English for HAFAS lookup."""
+    return _CITY_TRANSLATE.get(name.strip(), name.strip())
 
 
 async def search_hafas(
@@ -32,8 +92,8 @@ async def search_hafas(
     Returns a list of TransitOption including trains and buses.
     """
     try:
-        origin_id = await _resolve_location(origin)
-        dest_id = await _resolve_location(destination)
+        origin_id = await _resolve_location(_normalize_city(origin))
+        dest_id = await _resolve_location(_normalize_city(destination))
 
         if not origin_id or not dest_id:
             logger.warning("Could not resolve locations: %s, %s", origin, destination)
