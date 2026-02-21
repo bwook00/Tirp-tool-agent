@@ -81,6 +81,54 @@ def _normalize_city(name: str) -> str:
     return _CITY_TRANSLATE.get(name.strip(), name.strip())
 
 
+def _normalize_time(time_str: str | None) -> str:
+    """Normalize free-form time input to HH:MM format.
+
+    Handles: "6am", "6 am", "2pm", "14:00", "6:30pm", "오후 3시", etc.
+    Returns "00:00" if parsing fails.
+    """
+    if not time_str:
+        return "00:00"
+
+    import re
+
+    s = time_str.strip().lower()
+
+    # Korean format: "오후 3시", "오전 10시"
+    ko_match = re.match(r"(오전|오후)\s*(\d{1,2})시?", s)
+    if ko_match:
+        period, hour = ko_match.group(1), int(ko_match.group(2))
+        if period == "오후" and hour < 12:
+            hour += 12
+        elif period == "오전" and hour == 12:
+            hour = 0
+        return f"{hour:02d}:00"
+
+    # "6am", "6 am", "6:30am", "6:30 am", "2pm", "14:00"
+    am_pm_match = re.match(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", s)
+    if am_pm_match:
+        hour = int(am_pm_match.group(1))
+        minute = int(am_pm_match.group(2) or 0)
+        period = am_pm_match.group(3)
+        if period == "pm" and hour < 12:
+            hour += 12
+        elif period == "am" and hour == 12:
+            hour = 0
+        return f"{hour:02d}:{minute:02d}"
+
+    # "14:00", "6:30"
+    hm_match = re.match(r"(\d{1,2}):(\d{2})", s)
+    if hm_match:
+        return f"{int(hm_match.group(1)):02d}:{hm_match.group(2)}"
+
+    # Just a number: "6", "14"
+    num_match = re.match(r"(\d{1,2})$", s)
+    if num_match:
+        return f"{int(num_match.group(1)):02d}:00"
+
+    return "00:00"
+
+
 async def search_hafas(
     origin: str,
     destination: str,
@@ -99,7 +147,7 @@ async def search_hafas(
             logger.warning("Could not resolve locations: %s, %s", origin, destination)
             return []
 
-        departure_str = f"{date}T{time or '00:00'}"
+        departure_str = f"{date}T{_normalize_time(time)}"
 
         return await _fetch_journeys(origin_id, dest_id, departure_str)
 
