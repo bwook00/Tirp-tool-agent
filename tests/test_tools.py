@@ -190,29 +190,33 @@ async def test_search_buses_filters_buses(mock_omio):
 
 
 @pytest.mark.asyncio
+@patch("app.tools.train_search.search_hafas", new_callable=AsyncMock, return_value=[])
 @patch("app.tools.train_search.search_omio", new_callable=AsyncMock, return_value=[])
-async def test_search_trains_empty_results(mock_omio):
+async def test_search_trains_empty_results(mock_omio, mock_hafas):
     results = await search_trains("Berlin", "Munich", "2026-03-15")
     assert results == []
 
 
 @pytest.mark.asyncio
+@patch("app.tools.bus_search.search_hafas", new_callable=AsyncMock, return_value=[])
 @patch("app.tools.bus_search.search_omio", new_callable=AsyncMock, return_value=[])
-async def test_search_buses_empty_results(mock_omio):
+async def test_search_buses_empty_results(mock_omio, mock_hafas):
     results = await search_buses("Berlin", "Munich", "2026-03-15")
     assert results == []
 
 
 @pytest.mark.asyncio
+@patch("app.tools.train_search.search_hafas", new_callable=AsyncMock, return_value=[])
 @patch("app.tools.train_search.search_omio", new_callable=AsyncMock, side_effect=RuntimeError("browser crash"))
-async def test_search_trains_handles_error(mock_omio):
+async def test_search_trains_handles_error(mock_omio, mock_hafas):
     results = await search_trains("Berlin", "Munich", "2026-03-15")
     assert results == []
 
 
 @pytest.mark.asyncio
+@patch("app.tools.bus_search.search_hafas", new_callable=AsyncMock, return_value=[])
 @patch("app.tools.bus_search.search_omio", new_callable=AsyncMock, side_effect=RuntimeError("browser crash"))
-async def test_search_buses_handles_error(mock_omio):
+async def test_search_buses_handles_error(mock_omio, mock_hafas):
     results = await search_buses("Berlin", "Munich", "2026-03-15")
     assert results == []
 
