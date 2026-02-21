@@ -1,5 +1,6 @@
 import os
 import shutil
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,9 +10,45 @@ from app.core.config import settings
 from app.core.pipeline import process_travel_request
 from app.core.storage import clear_all_statuses, get_status, load_result
 from app.main import app
-from app.models.schemas import StatusEnum, TravelRequest
+from app.models.schemas import StatusEnum, TransitOption, TransportType, TravelRequest
 
 client = TestClient(app)
+
+
+def _mock_train_results(**kwargs) -> list[TransitOption]:
+    return [
+        TransitOption(
+            transport_type=TransportType.train,
+            provider="Deutsche Bahn",
+            departure_time=datetime(2026, 3, 1, 10, 0),
+            arrival_time=datetime(2026, 3, 1, 14, 0),
+            duration_minutes=240,
+            price=29.0,
+            currency="EUR",
+            transfers=0,
+        ),
+    ]
+
+
+def _mock_bus_results(**kwargs) -> list[TransitOption]:
+    return [
+        TransitOption(
+            transport_type=TransportType.bus,
+            provider="FlixBus",
+            departure_time=datetime(2026, 3, 1, 8, 0),
+            arrival_time=datetime(2026, 3, 1, 14, 30),
+            duration_minutes=390,
+            price=19.0,
+            currency="EUR",
+            transfers=0,
+        ),
+    ]
+
+
+_SEARCH_PATCHES = [
+    patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results),
+    patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results),
+]
 
 
 def _make_travel_request(
@@ -57,7 +94,9 @@ def _make_webhook_payload(
 def _clean_state():
     """Clear in-memory status store and data directory between tests."""
     clear_all_statuses()
-    yield
+    with patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+         patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
+        yield
     clear_all_statuses()
     data_dir = settings.data_dir
     if os.path.isdir(data_dir):
@@ -96,10 +135,10 @@ class TestAgentProcessing:
 
         status = await get_status("resp_pipeline_test")
         result = await load_result(status.result_id)
-        assert result.transport_type in ("train", "flight", "bus")
+        assert result.transport_type in ("train", "bus")
         assert result.provider != ""
         assert result.price > 0
-        assert result.currency == "KRW"
+        assert result.currency == "EUR"
         assert result.transfers >= 0
         assert result.duration_minutes > 0
         assert result.checkout_url != ""
@@ -214,5 +253,5 @@ class TestFullE2EFlow:
         assert result_body["origin"] == "서울"
         assert result_body["destination"] == "부산"
         assert result_body["response_id"] == rid
-        assert result_body["transport_type"] in ("train", "flight", "bus")
+        assert result_body["transport_type"] in ("train", "bus")
         assert result_body["result_id"] == result_id

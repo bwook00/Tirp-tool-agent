@@ -2,12 +2,15 @@ import base64
 import hashlib
 import hmac
 import json
+from datetime import datetime
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.storage import get_status, clear_all_statuses
 from app.main import app
+from app.models.schemas import TransitOption, TransportType
 
 client = TestClient(app)
 
@@ -51,11 +54,31 @@ def _make_payload(
     }
 
 
+def _mock_train_results(**kwargs):
+    return [TransitOption(
+        transport_type=TransportType.train, provider="DB",
+        departure_time=datetime(2026, 3, 1, 10, 0),
+        arrival_time=datetime(2026, 3, 1, 14, 0),
+        duration_minutes=240, price=29.0, currency="EUR",
+    )]
+
+
+def _mock_bus_results(**kwargs):
+    return [TransitOption(
+        transport_type=TransportType.bus, provider="FlixBus",
+        departure_time=datetime(2026, 3, 1, 8, 0),
+        arrival_time=datetime(2026, 3, 1, 14, 30),
+        duration_minutes=390, price=19.0, currency="EUR",
+    )]
+
+
 @pytest.fixture(autouse=True)
 def _clear_status_store():
-    """Clear the in-memory status store between tests."""
+    """Clear the in-memory status store and mock search tools between tests."""
     clear_all_statuses()
-    yield
+    with patch("app.core.agent.search_trains", new_callable=AsyncMock, side_effect=_mock_train_results), \
+         patch("app.core.agent.search_buses", new_callable=AsyncMock, side_effect=_mock_bus_results):
+        yield
     clear_all_statuses()
 
 

@@ -338,7 +338,6 @@ class TestAgentFallback:
 
     search_trains and search_buses are mocked because they now depend on
     Omio Playwright scraping, which requires installed browsers.
-    search_flights still uses its built-in mock data.
     """
 
     @pytest.mark.asyncio
@@ -359,7 +358,7 @@ class TestAgentFallback:
         assert result.result_id != ""
         assert result.checkout_url.startswith("https://")
         assert result.score_explain != ""
-        assert result.transport_type in ("train", "flight", "bus")
+        assert result.transport_type in ("train", "bus")
         assert result.duration_minutes > 0
         assert result.price > 0
 

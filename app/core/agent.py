@@ -15,16 +15,15 @@ from app.models.schemas import (
 from app.tools import TOOL_DEFINITIONS, execute_tool
 from app.tools.bus_search import search_buses
 from app.tools.checkout import get_checkout_link
-from app.tools.flight_search import search_flights
 from app.tools.train_search import search_trains
 
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = (
-    "당신은 한국 긴급 교통편 추천 에이전트입니다. "
-    "사용자의 여행 정보를 바탕으로 열차, 항공편, 버스를 검색하여 최적의 대안을 찾아주세요. "
-    "반드시 search_trains, search_flights, search_buses 도구를 모두 호출하여 "
-    "가능한 모든 옵션을 수집하세요."
+    "당신은 유럽 긴급 교통편 추천 에이전트입니다. "
+    "사용자의 여행 정보를 바탕으로 Omio에서 열차와 버스를 검색하여 최적의 대안을 찾아주세요. "
+    "반드시 search_trains, search_buses 도구를 모두 호출하여 가능한 모든 옵션을 수집하세요. "
+    "search_flights 도구는 사용하지 마세요."
 )
 
 _MAX_TOOL_ROUNDS = 10
@@ -117,7 +116,7 @@ async def _run_with_llm(request: TravelRequest) -> list[TransitOption]:
 
 
 async def _run_fallback(request: TravelRequest) -> list[TransitOption]:
-    """Fallback: directly call all three search tools without LLM."""
+    """Fallback: directly call search tools without LLM (trains + buses only)."""
     all_options: list[TransitOption] = []
 
     trains = await search_trains(
@@ -127,14 +126,6 @@ async def _run_fallback(request: TravelRequest) -> list[TransitOption]:
         time=request.departure_time,
     )
     all_options.extend(trains)
-
-    flights = await search_flights(
-        origin=request.origin,
-        destination=request.destination,
-        date=request.departure_date,
-        time=request.departure_time,
-    )
-    all_options.extend(flights)
 
     buses = await search_buses(
         origin=request.origin,

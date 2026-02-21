@@ -11,7 +11,6 @@ from app.tools.omio_search import (
     _parse_result_card,
 )
 from app.tools.train_search import search_trains
-from app.tools.flight_search import search_flights
 from app.tools.bus_search import search_buses
 from app.tools.checkout import get_checkout_link
 from app.tools import TOOL_DEFINITIONS, execute_tool
@@ -219,28 +218,6 @@ async def test_search_buses_handles_error(mock_omio):
 
 
 # ---------------------------------------------------------------------------
-# search_flights (still mock — unchanged)
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_search_flights_seoul_busan():
-    results = await search_flights("서울", "부산", "2026-03-15")
-    assert len(results) >= 1
-    for opt in results:
-        assert isinstance(opt, TransitOption)
-        assert opt.transport_type == TransportType.flight
-        assert opt.duration_minutes > 0
-        assert opt.price > 0
-
-
-@pytest.mark.asyncio
-async def test_search_flights_unknown_route():
-    results = await search_flights("대전", "강릉", "2026-03-15")
-    assert isinstance(results, list)
-    assert len(results) >= 1
-
-
-# ---------------------------------------------------------------------------
 # get_checkout_link
 # ---------------------------------------------------------------------------
 
@@ -283,7 +260,7 @@ async def test_get_checkout_link_expiry():
 # ---------------------------------------------------------------------------
 
 def test_tool_definitions_count():
-    assert len(TOOL_DEFINITIONS) == 4
+    assert len(TOOL_DEFINITIONS) == 3
 
 
 def test_tool_definitions_structure():
@@ -299,7 +276,7 @@ def test_tool_definitions_structure():
 
 def test_tool_definitions_names():
     names = {d["name"] for d in TOOL_DEFINITIONS}
-    assert names == {"search_trains", "search_flights", "search_buses", "get_checkout_link"}
+    assert names == {"search_trains", "search_buses", "get_checkout_link"}
 
 
 def test_tool_descriptions_no_korean_references():
@@ -328,17 +305,6 @@ async def test_execute_tool_search_trains(mock_omio):
     assert isinstance(results, list)
     assert len(results) == 2
     assert all(isinstance(r, TransitOption) for r in results)
-
-
-@pytest.mark.asyncio
-async def test_execute_tool_search_flights():
-    results = await execute_tool("search_flights", {
-        "origin": "서울",
-        "destination": "제주",
-        "date": "2026-03-15",
-    })
-    assert isinstance(results, list)
-    assert len(results) >= 1
 
 
 @pytest.mark.asyncio

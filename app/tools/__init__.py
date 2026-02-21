@@ -3,12 +3,10 @@ from typing import Any
 from app.models.schemas import TransitOption
 from app.tools.bus_search import search_buses
 from app.tools.checkout import get_checkout_link
-from app.tools.flight_search import search_flights
 from app.tools.train_search import search_trains
 
 __all__ = [
     "search_trains",
-    "search_flights",
     "search_buses",
     "get_checkout_link",
     "execute_tool",
@@ -32,36 +30,6 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "destination": {
                     "type": "string",
                     "description": "Arrival city (e.g. 'Munich', 'Amsterdam')",
-                },
-                "date": {
-                    "type": "string",
-                    "description": "Travel date in YYYY-MM-DD format",
-                },
-                "time": {
-                    "type": "string",
-                    "description": "Preferred departure time in HH:MM format (optional)",
-                },
-            },
-            "required": ["origin", "destination", "date"],
-        },
-    },
-    {
-        "name": "search_flights",
-        "description": (
-            "Search for flight options between two cities. "
-            "Returns a list of available flights with departure/arrival times, prices, and duration. "
-            "(Currently returns mock data; Skyscanner integration planned.)"
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "origin": {
-                    "type": "string",
-                    "description": "Departure city (e.g. 'Berlin', 'London')",
-                },
-                "destination": {
-                    "type": "string",
-                    "description": "Arrival city (e.g. 'Paris', 'Rome')",
                 },
                 "date": {
                     "type": "string",
@@ -165,7 +133,6 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
 
 _TOOL_DISPATCH: dict[str, Any] = {
     "search_trains": search_trains,
-    "search_flights": search_flights,
     "search_buses": search_buses,
     "get_checkout_link": None,  # handled specially below
 }
