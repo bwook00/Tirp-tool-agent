@@ -5,7 +5,7 @@ from app.models.schemas import (
     ScoredOption,
     RecommendationResult,
     ProcessingStatus,
-    TypeformWebhookPayload,
+    TallyWebhookPayload,
 )
 
 __all__ = [
@@ -15,5 +15,5 @@ __all__ = [
     "ScoredOption",
     "RecommendationResult",
     "ProcessingStatus",
-    "TypeformWebhookPayload",
+    "TallyWebhookPayload",
 ]

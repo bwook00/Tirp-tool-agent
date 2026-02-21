@@ -93,9 +93,10 @@ class ProcessingStatus(BaseModel):
     error_message: str | None = None
 
 
-# --- Typeform ---
+# --- Tally.so ---
 
-class TypeformWebhookPayload(BaseModel):
-    event_id: str = ""
-    event_type: str = ""
-    form_response: dict[str, Any] = Field(default_factory=dict)
+class TallyWebhookPayload(BaseModel):
+    eventId: str = ""
+    eventType: str = ""
+    createdAt: str = ""
+    data: dict[str, Any] = Field(default_factory=dict)
