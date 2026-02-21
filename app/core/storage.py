@@ -65,6 +65,33 @@ async def get_status(response_id: str) -> ProcessingStatus | None:
     return None
 
 
+async def get_latest_active_response_id() -> str | None:
+    """Scan status files and return the most recent pending/processing response_id."""
+    if not os.path.isdir(_STATUS_DIR):
+        return None
+
+    latest_mtime = 0.0
+    latest_response_id: str | None = None
+
+    for filename in os.listdir(_STATUS_DIR):
+        if not filename.endswith(".json"):
+            continue
+        filepath = os.path.join(_STATUS_DIR, filename)
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            status = data.get("status")
+            if status in (StatusEnum.pending, StatusEnum.processing):
+                mtime = os.path.getmtime(filepath)
+                if mtime > latest_mtime:
+                    latest_mtime = mtime
+                    latest_response_id = data.get("response_id")
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return latest_response_id
+
+
 def clear_all_statuses() -> None:
     """Clear in-memory status cache and status files (for testing)."""
     import shutil

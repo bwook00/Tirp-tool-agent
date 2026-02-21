@@ -84,7 +84,7 @@ async def _dismiss_cookie_banner(page: Page) -> None:
     """Dismiss the cookie consent banner if present."""
     try:
         accept_btn = page.locator(
-            "[data-testid='cookie-banner-accept'], "
+            '[data-element="gdpr-banner-button-accept"], '
             "#didomi-notice-agree-button, "
             "button:has-text('Accept')"
         )
@@ -101,61 +101,66 @@ async def _fill_search(
     destination: str,
     date: str,
 ) -> None:
-    """Fill in the Omio search form: origin, destination, date, one-way."""
+    """Fill in the Omio search form: origin, destination, date."""
     # Origin
-    origin_input = page.locator(
-        "[data-testid='searchbar-origin'] input, "
-        "input[placeholder*='From'], "
-        "input[name='origin']"
-    ).first
+    origin_input = page.locator('[data-e2e="departurePositionInput"]').first
     await origin_input.click()
     await origin_input.fill(origin)
     await page.wait_for_timeout(1000)
-    await page.locator("[role='option']").first.wait_for(timeout=_SELECTOR_TIMEOUT_MS)
-    await page.locator("[role='option']").first.click()
+    suggestion = page.locator('[data-e2e="positionSuggestion"]')
+    await suggestion.first.wait_for(timeout=_SELECTOR_TIMEOUT_MS)
+    await suggestion.first.click()
 
     # Destination
-    dest_input = page.locator(
-        "[data-testid='searchbar-destination'] input, "
-        "input[placeholder*='To'], "
-        "input[name='destination']"
-    ).first
+    dest_input = page.locator('[data-e2e="arrivalPositionInput"]').first
     await dest_input.click()
     await dest_input.fill(destination)
     await page.wait_for_timeout(1000)
-    await page.locator("[role='option']").first.wait_for(timeout=_SELECTOR_TIMEOUT_MS)
-    await page.locator("[role='option']").first.click()
+    suggestion = page.locator('[data-e2e="positionSuggestion"]')
+    await suggestion.first.wait_for(timeout=_SELECTOR_TIMEOUT_MS)
+    await suggestion.first.click()
 
-    # Date
-    date_input = page.locator(
-        "[data-testid='searchbar-date'] input, "
-        "input[name='date'], "
-        "input[type='date']"
-    ).first
-    await date_input.click()
-    await date_input.fill(date)
+    # Date — open calendar and click the target day
+    date_btn = page.locator('[data-e2e="buttonDepartureDate"]').first
+    await date_btn.click()
     await page.wait_for_timeout(500)
 
-    # Ensure one-way
-    try:
-        oneway_btn = page.locator(
-            "[data-testid='searchbar-oneway'], "
-            "label:has-text('One way'), "
-            "input[value='one-way']"
-        ).first
-        if await oneway_btn.is_visible(timeout=2000):
-            await oneway_btn.click()
-    except Exception:
-        logger.debug("One-way already selected or selector not found")
+    # Parse target date parts for matching
+    target = datetime.strptime(date, "%Y-%m-%d")
+    target_month = target.strftime("%b")  # e.g. "Mar"
+    target_day = str(target.day)          # e.g. "15"
+
+    # Scroll through calendar months until we find the target
+    for _ in range(12):
+        day_cells = page.locator('[data-e2e="calendarDay"]')
+        count = await day_cells.count()
+        for i in range(count):
+            cell = day_cells.nth(i)
+            date_attr = await cell.get_attribute("date")
+            if date_attr and date_attr.startswith(target.strftime("%a %b %d %Y")):
+                await cell.click()
+                return
+        # Try clicking a forward/next button to advance the calendar
+        try:
+            next_btn = page.locator(
+                '[data-e2e="calendarButtonNext"], '
+                'button[aria-label="Next month"], '
+                'button[aria-label="next"]'
+            ).first
+            if await next_btn.is_visible(timeout=2000):
+                await next_btn.click()
+                await page.wait_for_timeout(500)
+            else:
+                break
+        except Exception:
+            break
+
+    logger.warning("Could not find target date %s in calendar", date)
 
 
 async def _click_search(page: Page) -> None:
     """Click the search button and wait for results to load."""
-    search_btn = page.locator(
-        "[data-testid='searchbar-submit'], "
-        "button[type='submit'], "
-        "button:has-text('Search')"
-    ).first
+    search_btn = page.locator('[data-e2e="buttonSearch"]').first
     await search_btn.click()
     await page.wait_for_load_state(
         "networkidle",
