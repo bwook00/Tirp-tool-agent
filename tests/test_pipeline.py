@@ -28,21 +28,24 @@ def _make_travel_request(
 
 
 def _make_webhook_payload(
-    token: str = "resp_e2e_test",
+    response_id: str = "resp_e2e_test",
     origin: str = "서울",
     destination: str = "부산",
     departure_date: str = "2026-03-01",
 ) -> dict:
     return {
-        "event_id": "evt_001",
-        "event_type": "form_response",
-        "form_response": {
-            "token": token,
-            "submitted_at": "2026-03-01T10:00:00Z",
-            "answers": [
-                {"field": {"ref": "origin"}, "type": "text", "text": origin},
-                {"field": {"ref": "destination"}, "type": "text", "text": destination},
-                {"field": {"ref": "departure_date"}, "type": "date", "date": departure_date},
+        "eventId": "evt_001",
+        "eventType": "FORM_RESPONSE",
+        "createdAt": "2026-03-01T10:00:00Z",
+        "data": {
+            "responseId": response_id,
+            "submissionId": "sub_001",
+            "respondentId": "rsp_001",
+            "formId": "form_001",
+            "fields": [
+                {"key": "origin", "label": "Origin", "type": "INPUT_TEXT", "value": origin},
+                {"key": "destination", "label": "Destination", "type": "INPUT_TEXT", "value": destination},
+                {"key": "departure_date", "label": "Departure Date", "type": "INPUT_DATE", "value": departure_date},
             ],
         },
     }
@@ -161,16 +164,16 @@ class TestWebhookTriggersBackground:
 
     def test_webhook_returns_200_and_triggers_processing(self):
         """Webhook should return 200 immediately; background task runs after."""
-        payload = _make_webhook_payload(token="resp_bg_test")
-        resp = client.post("/webhook/typeform", json=payload)
+        payload = _make_webhook_payload(response_id="resp_bg_test")
+        resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 200
         assert resp.json()["response_id"] == "resp_bg_test"
 
     def test_webhook_background_task_completes(self):
         """After webhook + background task, status should be done."""
-        payload = _make_webhook_payload(token="resp_bg_done")
+        payload = _make_webhook_payload(response_id="resp_bg_done")
         # TestClient runs background tasks synchronously
-        resp = client.post("/webhook/typeform", json=payload)
+        resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 200
 
         # TestClient executes BackgroundTasks synchronously, so status should be done
@@ -186,15 +189,15 @@ class TestFullE2EFlow:
 
     def test_full_flow_webhook_to_result(self):
         """End-to-end: webhook -> status done -> result available."""
-        token = "resp_e2e_full"
-        payload = _make_webhook_payload(token=token)
+        resp_id = "resp_e2e_full"
+        payload = _make_webhook_payload(response_id=resp_id)
 
         # Step 1: Webhook receives payload
-        webhook_resp = client.post("/webhook/typeform", json=payload)
+        webhook_resp = client.post("/webhook/tally", json=payload)
         assert webhook_resp.status_code == 200
 
         # Step 2: Poll status (TestClient runs background tasks synchronously)
-        status_resp = client.get(f"/api/status/{token}")
+        status_resp = client.get(f"/api/status/{resp_id}")
         assert status_resp.status_code == 200
         status_body = status_resp.json()
         assert status_body["status"] == "done"
@@ -208,6 +211,6 @@ class TestFullE2EFlow:
         result_body = result_resp.json()
         assert result_body["origin"] == "서울"
         assert result_body["destination"] == "부산"
-        assert result_body["response_id"] == token
+        assert result_body["response_id"] == resp_id
         assert result_body["transport_type"] in ("train", "flight", "bus")
         assert result_body["result_id"] == result_id
