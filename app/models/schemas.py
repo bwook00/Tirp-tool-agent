@@ -93,10 +93,30 @@ class ProcessingStatus(BaseModel):
     error_message: str | None = None
 
 
-# --- Tally.so ---
+# --- Tally ---
+
+
+class TallyField(BaseModel):
+    key: str = ""
+    label: str = ""
+    type: str = ""
+    value: Any = None
+
+
+class TallySubmissionData(BaseModel):
+    response_id: str = Field("", alias="responseId")
+    submission_id: str = Field("", alias="submissionId")
+    respondent_id: str = Field("", alias="respondentId")
+    form_id: str = Field("", alias="formId")
+    fields: list[TallyField] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True}
+
 
 class TallyWebhookPayload(BaseModel):
-    eventId: str = ""
-    eventType: str = ""
-    createdAt: str = ""
-    data: dict[str, Any] = Field(default_factory=dict)
+    event_id: str = Field("", alias="eventId")
+    event_type: str = Field("", alias="eventType")
+    created_at: str = Field("", alias="createdAt")
+    data: TallySubmissionData = Field(default_factory=TallySubmissionData)
+
+    model_config = {"populate_by_name": True}

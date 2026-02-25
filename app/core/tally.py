@@ -1,65 +1,60 @@
-"""Parse Tally.so webhook payload into a TravelRequest."""
+"""Parse Tally webhook payload into a TravelRequest."""
 
-from typing import Any
+from app.models.schemas import (
+    Preferences,
+    PrimaryGoal,
+    TallyField,
+    TallySubmissionData,
+    TravelRequest,
+)
 
-from app.models.schemas import Preferences, PrimaryGoal, TravelRequest
-
-# Tally field label → internal field name 매핑
-# Tally 폼의 질문 라벨 기준. 폼 변경 시 여기만 업데이트.
-TALLY_LABEL_MAP: dict[str, str] = {
-    # Tally 폼 (5BzVNM) 실제 라벨
-    "What is your departure location?": "origin",
-    "What is your destination?": "destination",
-    "What is your preferred date of travel?": "departure_date",
-    "What departure time would you like?": "departure_time",
-    "How many people are traveling?": "passenger_count",
-    "what is your name?": "name",
-    "What is the most important factor when choosing an alternative mode of transportation?": "primary_goal",
-    # 한국어 폴백
-    "출발지": "origin",
-    "도착지": "destination",
-    "출발 날짜": "departure_date",
-    "출발 시간": "departure_time",
-    "승객 수": "passenger_count",
-    "이메일": "email",
-    "우선순위": "primary_goal",
+# Tally field key → internal field name 매핑
+# Tally 폼 변경 시 여기만 업데이트.
+TALLY_KEY_MAP: dict[str, str] = {
+    "question_nGVOax": "origin",
+    "question_mOWkbr": "destination",
+    "question_3XePVe": "departure_date",
+    "question_wQ72Nd": "passenger_count",
+    "question_3jPB7E": "email",
+    "question_wMEaVL": "departure_time",
+    "question_3Nbyp2": "primary_goal",
 }
 
 
-def _find_field_value(fields: list[dict[str, Any]], name: str) -> str | None:
-    """Find a field value by its mapped internal name."""
+def _find_field_value(fields: list[TallyField], name: str) -> str | None:
+    """Find a field by its mapped name and return the string value."""
     for field in fields:
-        label = field.get("label", "")
-        mapped_name = TALLY_LABEL_MAP.get(label, "")
-        if mapped_name == name:
-            value = field.get("value")
-            if value is None:
+        resolved_key = TALLY_KEY_MAP.get(field.key, field.key)
+        if resolved_key == name:
+            if field.value is None:
                 return None
-            # MULTIPLE_CHOICE / DROPDOWN return list of UUIDs — resolve via options
-            if isinstance(value, list) and field.get("options"):
-                options_map = {opt["id"]: opt["text"] for opt in field["options"]}
-                resolved = [options_map.get(v, v) for v in value]
-                return resolved[0] if resolved else None
-            return str(value)
+            if isinstance(field.value, str):
+                return field.value
+            if isinstance(field.value, (int, float)):
+                return str(field.value)
+            # Tally option values can be objects with id/name
+            if isinstance(field.value, dict):
+                return field.value.get("name") or field.value.get("label") or str(field.value)
+            if isinstance(field.value, list) and field.value:
+                first = field.value[0]
+                if isinstance(first, dict):
+                    return first.get("name") or first.get("label") or str(first)
+                return str(first)
+            return str(field.value)
     return None
 
 
-def parse_travel_request(data: dict[str, Any]) -> TravelRequest:
-    """Extract TravelRequest fields from a Tally webhook data dict.
-
-    Expects the `data` object from Tally's webhook payload
-    (i.e. payload["data"]).
+def parse_travel_request(data: TallySubmissionData) -> TravelRequest:
+    """Extract TravelRequest fields from Tally submission data.
 
     Raises ValueError when required fields (origin, destination, departure_date)
     are missing.
     """
-    response_id: str = data.get("responseId", "")
-    if not response_id:
-        response_id = data.get("submissionId", "")
+    response_id = data.response_id
     if not response_id:
         raise ValueError("data.responseId is missing")
 
-    fields: list[dict[str, Any]] = data.get("fields", [])
+    fields = data.fields
 
     origin = _find_field_value(fields, "origin")
     destination = _find_field_value(fields, "destination")
@@ -75,13 +70,11 @@ def parse_travel_request(data: dict[str, Any]) -> TravelRequest:
     departure_time = _find_field_value(fields, "departure_time")
 
     # Parse optional preferences
-    # Tally options may look like "fastest — 가장 빠른 도착"; extract the key before "—"
     goal_raw = _find_field_value(fields, "primary_goal")
     primary_goal = PrimaryGoal.fastest
     if goal_raw:
-        goal_key = goal_raw.split("—")[0].split("-")[0].strip().lower()
         try:
-            primary_goal = PrimaryGoal(goal_key)
+            primary_goal = PrimaryGoal(goal_raw)
         except ValueError:
             pass  # fall back to default
 

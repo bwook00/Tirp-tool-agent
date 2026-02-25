@@ -19,13 +19,13 @@ router = APIRouter(prefix="/webhook", tags=["webhook"])
 
 def _verify_signature(payload_body: bytes, signature: str, secret: str) -> bool:
     """Verify Tally HMAC-SHA256 webhook signature (base64-encoded)."""
-    calculated = hmac.new(
+    computed = hmac.new(
         secret.encode("utf-8"),
         payload_body,
         hashlib.sha256,
     ).digest()
-    calculated_b64 = base64.b64encode(calculated).decode("utf-8")
-    return hmac.compare_digest(calculated_b64, signature)
+    expected = base64.b64encode(computed).decode("utf-8")
+    return hmac.compare_digest(expected, signature)
 
 
 @router.post("/tally", status_code=200)
@@ -34,10 +34,10 @@ async def receive_tally_webhook(
     background_tasks: BackgroundTasks,
     tally_signature: str | None = Header(None, alias="Tally-Signature"),
 ) -> dict[str, str]:
-    """Receive a Tally.so webhook, parse it, and start processing."""
+    """Receive a Tally webhook, parse it, and store initial pending status."""
     raw_body = await request.body()
 
-    # Verify HMAC signature when a secret is configured
+    # Verify HMAC signature when a signing secret is configured
     if settings.tally_signing_secret:
         if not tally_signature:
             raise HTTPException(status_code=403, detail="Missing webhook signature")
@@ -55,10 +55,10 @@ async def receive_tally_webhook(
     except Exception:
         raise HTTPException(status_code=400, detail="Payload does not match expected schema")
 
-    if not payload.data:
-        raise HTTPException(status_code=400, detail="Missing data in payload")
+    if not payload.data.fields:
+        raise HTTPException(status_code=400, detail="Missing fields in payload data")
 
-    # Extract TravelRequest from data
+    # Extract TravelRequest from submission data
     try:
         travel_request = parse_travel_request(payload.data)
     except ValueError as exc:

@@ -26,29 +26,27 @@ def _make_payload(
     passenger_count: int | None = None,
 ) -> dict:
     fields = [
-        {"key": "q_origin", "label": "출발지", "type": "INPUT_TEXT", "value": origin},
-        {"key": "q_dest", "label": "도착지", "type": "INPUT_TEXT", "value": destination},
-        {"key": "q_date", "label": "출발 날짜", "type": "INPUT_DATE", "value": departure_date},
+        {"key": "origin", "label": "Origin", "type": "INPUT_TEXT", "value": origin},
+        {"key": "destination", "label": "Destination", "type": "INPUT_TEXT", "value": destination},
+        {"key": "departure_date", "label": "Departure Date", "type": "INPUT_DATE", "value": departure_date},
     ]
     if departure_time is not None:
-        fields.append({"key": "q_time", "label": "출발 시간", "type": "INPUT_TIME", "value": departure_time})
+        fields.append({"key": "departure_time", "label": "Departure Time", "type": "INPUT_TEXT", "value": departure_time})
     if primary_goal is not None:
-        fields.append({"key": "q_goal", "label": "우선순위", "type": "INPUT_TEXT", "value": primary_goal})
+        fields.append({"key": "primary_goal", "label": "Primary Goal", "type": "INPUT_TEXT", "value": primary_goal})
     if email is not None:
-        fields.append({"key": "q_email", "label": "이메일", "type": "INPUT_EMAIL", "value": email})
+        fields.append({"key": "email", "label": "Email", "type": "INPUT_EMAIL", "value": email})
     if passenger_count is not None:
-        fields.append({"key": "q_pax", "label": "승객 수", "type": "INPUT_NUMBER", "value": passenger_count})
+        fields.append({"key": "passenger_count", "label": "Passenger Count", "type": "INPUT_NUMBER", "value": passenger_count})
     return {
         "eventId": "evt_001",
         "eventType": "FORM_RESPONSE",
-        "createdAt": "2026-03-01T10:00:00.000Z",
+        "createdAt": "2026-03-01T10:00:00Z",
         "data": {
             "responseId": response_id,
-            "submissionId": response_id,
-            "respondentId": "respondent_001",
+            "submissionId": "sub_001",
+            "respondentId": "rsp_001",
             "formId": "form_001",
-            "formName": "Travel Survey",
-            "createdAt": "2026-03-01T10:00:00.000Z",
             "fields": fields,
         },
     }
@@ -106,7 +104,7 @@ class TestTallyWebhook:
         payload = _make_payload()
         payload["data"]["fields"] = [
             f for f in payload["data"]["fields"]
-            if f["label"] != "출발지"
+            if f["key"] != "origin"
         ]
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 422
@@ -115,7 +113,7 @@ class TestTallyWebhook:
         payload = _make_payload()
         payload["data"]["fields"] = [
             f for f in payload["data"]["fields"]
-            if f["label"] != "도착지"
+            if f["key"] != "destination"
         ]
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 422
@@ -124,20 +122,47 @@ class TestTallyWebhook:
         payload = _make_payload()
         payload["data"]["fields"] = [
             f for f in payload["data"]["fields"]
-            if f["label"] != "출발 날짜"
+            if f["key"] != "departure_date"
         ]
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 422
 
-    def test_empty_data_returns_400(self):
-        payload = {"eventId": "e1", "eventType": "FORM_RESPONSE", "data": {}}
+    def test_empty_fields_returns_400(self):
+        payload = {
+            "eventId": "e1",
+            "eventType": "FORM_RESPONSE",
+            "createdAt": "2026-03-01T10:00:00Z",
+            "data": {
+                "responseId": "resp_001",
+                "submissionId": "sub_001",
+                "respondentId": "rsp_001",
+                "formId": "form_001",
+                "fields": [],
+            },
+        }
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 400
 
-    def test_missing_data_returns_400(self):
-        payload = {"eventId": "e1", "eventType": "FORM_RESPONSE"}
+    def test_missing_data_returns_422(self):
+        """Missing responseId in data causes a 422 from parser."""
+        payload = {
+            "eventId": "e1",
+            "eventType": "FORM_RESPONSE",
+            "createdAt": "2026-03-01T10:00:00Z",
+            "data": {
+                "responseId": "",
+                "submissionId": "",
+                "respondentId": "",
+                "formId": "",
+                "fields": [
+                    {"key": "origin", "label": "Origin", "type": "INPUT_TEXT", "value": "서울"},
+                    {"key": "destination", "label": "Destination", "type": "INPUT_TEXT", "value": "부산"},
+                    {"key": "departure_date", "label": "Date", "type": "INPUT_DATE", "value": "2026-03-01"},
+                ],
+            },
+        }
         resp = client.post("/webhook/tally", json=payload)
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
     def test_invalid_json_returns_400(self):
         resp = client.post(
@@ -167,19 +192,21 @@ class TestTallyWebhook:
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 200
 
-    def test_dropdown_choice_with_options(self):
-        """Tally dropdown/choice fields return UUID list + options array."""
+    def test_email_and_passenger_count_parsed(self):
+        payload = _make_payload(email="user@example.com", passenger_count=2)
+        resp = client.post("/webhook/tally", json=payload)
+        assert resp.status_code == 200
+
+    def test_option_value_as_dict(self):
+        """Tally option-type values (dict with name) should be parsed correctly."""
         payload = _make_payload()
-        payload["data"]["fields"].append({
-            "key": "q_goal",
-            "label": "우선순위",
+        # Replace origin with a dict option value
+        payload["data"]["fields"][0] = {
+            "key": "origin",
+            "label": "Origin",
             "type": "MULTIPLE_CHOICE",
-            "value": ["opt-uuid-1"],
-            "options": [
-                {"id": "opt-uuid-1", "text": "cheapest"},
-                {"id": "opt-uuid-2", "text": "fastest"},
-            ],
-        })
+            "value": {"id": "opt_1", "name": "서울"},
+        }
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 200
 
@@ -224,3 +251,54 @@ class TestTallyHmacSignature:
         payload = _make_payload()
         resp = client.post("/webhook/tally", json=payload)
         assert resp.status_code == 200
+
+
+class TestTallyKeyMapping:
+    """실제 Tally question key가 올바르게 매핑되는지 검증."""
+
+    def test_tally_keys_parsed(self):
+        payload = {
+            "eventId": "evt_real",
+            "eventType": "FORM_RESPONSE",
+            "createdAt": "2026-03-01T10:00:00Z",
+            "data": {
+                "responseId": "resp_key_test",
+                "submissionId": "sub_002",
+                "respondentId": "rsp_002",
+                "formId": "form_002",
+                "fields": [
+                    {"key": "question_nGVOax", "label": "Origin", "type": "INPUT_TEXT", "value": "Berlin"},
+                    {"key": "question_mOWkbr", "label": "Destination", "type": "INPUT_TEXT", "value": "Munich"},
+                    {"key": "question_3XePVe", "label": "Date", "type": "INPUT_DATE", "value": "2026-04-01"},
+                    {"key": "question_wQ72Nd", "label": "Passengers", "type": "INPUT_NUMBER", "value": 2},
+                    {"key": "question_3jPB7E", "label": "Email", "type": "INPUT_EMAIL", "value": "test@example.com"},
+                    {"key": "question_wMEaVL", "label": "Time", "type": "INPUT_TEXT", "value": "14:00"},
+                    {"key": "question_3Nbyp2", "label": "Goal", "type": "MULTIPLE_CHOICE", "value": "cheapest"},
+                ],
+            },
+        }
+        resp = client.post("/webhook/tally", json=payload)
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["response_id"] == "resp_key_test"
+
+    def test_tally_keys_missing_required_field(self):
+        """Tally key payload에서 필수 필드 누락 시 422 반환."""
+        payload = {
+            "eventId": "evt_real",
+            "eventType": "FORM_RESPONSE",
+            "createdAt": "2026-03-01T10:00:00Z",
+            "data": {
+                "responseId": "resp_key_missing",
+                "submissionId": "sub_003",
+                "respondentId": "rsp_003",
+                "formId": "form_003",
+                "fields": [
+                    {"key": "question_nGVOax", "label": "Origin", "type": "INPUT_TEXT", "value": "Berlin"},
+                    # destination 누락
+                    {"key": "question_3XePVe", "label": "Date", "type": "INPUT_DATE", "value": "2026-04-01"},
+                ],
+            },
+        }
+        resp = client.post("/webhook/tally", json=payload)
+        assert resp.status_code == 422

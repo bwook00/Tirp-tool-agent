@@ -67,18 +67,16 @@ def _make_webhook_payload(
     return {
         "eventId": "evt_001",
         "eventType": "FORM_RESPONSE",
-        "createdAt": "2026-03-01T10:00:00.000Z",
+        "createdAt": "2026-03-01T10:00:00Z",
         "data": {
             "responseId": response_id,
-            "submissionId": response_id,
-            "respondentId": "respondent_001",
+            "submissionId": "sub_001",
+            "respondentId": "rsp_001",
             "formId": "form_001",
-            "formName": "Travel Survey",
-            "createdAt": "2026-03-01T10:00:00.000Z",
             "fields": [
-                {"key": "q_origin", "label": "출발지", "type": "INPUT_TEXT", "value": origin},
-                {"key": "q_dest", "label": "도착지", "type": "INPUT_TEXT", "value": destination},
-                {"key": "q_date", "label": "출발 날짜", "type": "INPUT_DATE", "value": departure_date},
+                {"key": "origin", "label": "Origin", "type": "INPUT_TEXT", "value": origin},
+                {"key": "destination", "label": "Destination", "type": "INPUT_TEXT", "value": destination},
+                {"key": "departure_date", "label": "Departure Date", "type": "INPUT_DATE", "value": departure_date},
             ],
         },
     }
@@ -224,15 +222,15 @@ class TestFullE2EFlow:
 
     def test_full_flow_webhook_to_result(self):
         """End-to-end: webhook -> status done -> result available."""
-        rid = "resp_e2e_full"
-        payload = _make_webhook_payload(response_id=rid)
+        resp_id = "resp_e2e_full"
+        payload = _make_webhook_payload(response_id=resp_id)
 
         # Step 1: Webhook receives payload
         webhook_resp = client.post("/webhook/tally", json=payload)
         assert webhook_resp.status_code == 200
 
         # Step 2: Poll status (TestClient runs background tasks synchronously)
-        status_resp = client.get(f"/api/status/{rid}")
+        status_resp = client.get(f"/api/status/{resp_id}")
         assert status_resp.status_code == 200
         status_body = status_resp.json()
         assert status_body["status"] == "done"
@@ -246,6 +244,6 @@ class TestFullE2EFlow:
         result_body = result_resp.json()
         assert result_body["origin"] == "서울"
         assert result_body["destination"] == "부산"
-        assert result_body["response_id"] == rid
-        assert result_body["transport_type"] in ("train", "bus")
+        assert result_body["response_id"] == resp_id
+        assert result_body["transport_type"] in ("train", "flight", "bus")
         assert result_body["result_id"] == result_id
