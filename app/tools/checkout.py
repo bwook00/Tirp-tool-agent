@@ -177,6 +177,44 @@ async def _build_provider_search_url(
             f"&adult=1&_locale=en_US"
         )
 
+    if "trenitalia" in provider_key or "frecciarossa" in provider_key:
+        # Trenitalia booking front-end (LeFrecce) route.
+        return (
+            "https://www.lefrecce.it/Channels.Website.WEB/#/search-results"
+            f"?from={quote_plus(origin_en)}"
+            f"&to={quote_plus(destination_en)}"
+            f"&departureDate={quote_plus(departure_date)}"
+            f"&departureTime={quote_plus(time_value)}"
+        )
+
+    if "renfe" in provider_key:
+        # Renfe query string format (date as DD/MM/YYYY).
+        date_parts = departure_date.split("-")
+        date_for_renfe = departure_date
+        if len(date_parts) == 3:
+            date_for_renfe = f"{date_parts[2]}/{date_parts[1]}/{date_parts[0]}"
+        return (
+            "https://www.renfe.com/es/en"
+            f"?from={quote_plus(origin_en)}"
+            f"&to={quote_plus(destination_en)}"
+            f"&departureDate={quote_plus(date_for_renfe)}"
+            f"&departureTime={quote_plus(time_value)}"
+        )
+
+    if "oebb" in provider_key or "\u00f6bb" in provider_key or "railjet" in provider_key:
+        # OEBB/Scotty planner query format.
+        date_parts = departure_date.split("-")
+        date_for_oebb = departure_date
+        if len(date_parts) == 3:
+            date_for_oebb = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+        return (
+            "https://fahrplan.oebb.at/bin/query.exe/en"
+            f"?from={quote_plus(origin_en)}"
+            f"&to={quote_plus(destination_en)}"
+            f"&date={quote_plus(date_for_oebb)}"
+            f"&time={quote_plus(time_value)}"
+        )
+
     return _BOOKING_URLS.get(provider, _default_url(transport_type))
 
 

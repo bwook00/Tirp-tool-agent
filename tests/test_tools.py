@@ -210,3 +210,69 @@ async def test_get_checkout_link_flix_uses_resolved_ids():
     assert "shop.global.flixbus.com/search" in result["checkout_url"]
     assert "departureCity=40de8964-8646-11e6-9066-549f350fcb0c" in result["checkout_url"]
     assert "arrivalCity=40de3026-8646-11e6-9066-549f350fcb0c" in result["checkout_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_checkout_link_trenitalia_prefills_route():
+    option = TransitOption(
+        transport_type=TransportType.train,
+        provider="Trenitalia",
+        departure_time=datetime(2026, 3, 15, 10, 0),
+        arrival_time=datetime(2026, 3, 15, 12, 30),
+        duration_minutes=150,
+        price=44.0,
+    )
+    result = await get_checkout_link(
+        option,
+        origin="Milan",
+        destination="Rome",
+        departure_date="2026-03-03",
+        departure_time="08:00",
+    )
+    assert "lefrecce.it/Channels.Website.WEB/#/search-results" in result["checkout_url"]
+    assert "from=Milan" in result["checkout_url"]
+    assert "to=Rome" in result["checkout_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_checkout_link_renfe_prefills_route():
+    option = TransitOption(
+        transport_type=TransportType.train,
+        provider="Renfe",
+        departure_time=datetime(2026, 3, 15, 10, 0),
+        arrival_time=datetime(2026, 3, 15, 12, 30),
+        duration_minutes=150,
+        price=44.0,
+    )
+    result = await get_checkout_link(
+        option,
+        origin="Madrid",
+        destination="Barcelona",
+        departure_date="2026-03-03",
+        departure_time="08:00",
+    )
+    assert "renfe.com/es/en" in result["checkout_url"]
+    assert "from=Madrid" in result["checkout_url"]
+    assert "to=Barcelona" in result["checkout_url"]
+
+
+@pytest.mark.asyncio
+async def test_get_checkout_link_oebb_prefills_route():
+    option = TransitOption(
+        transport_type=TransportType.train,
+        provider="OEBB",
+        departure_time=datetime(2026, 3, 15, 10, 0),
+        arrival_time=datetime(2026, 3, 15, 12, 30),
+        duration_minutes=150,
+        price=44.0,
+    )
+    result = await get_checkout_link(
+        option,
+        origin="Vienna",
+        destination="Salzburg",
+        departure_date="2026-03-03",
+        departure_time="08:00",
+    )
+    assert "fahrplan.oebb.at/bin/query.exe/en" in result["checkout_url"]
+    assert "from=Vienna" in result["checkout_url"]
+    assert "to=Salzburg" in result["checkout_url"]
