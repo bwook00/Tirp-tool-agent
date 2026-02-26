@@ -43,7 +43,13 @@ async def run_agent(request: TravelRequest) -> RecommendationResult:
     top = scored[0]
 
     # Get checkout link
-    checkout = await get_checkout_link(top.option)
+    checkout = await get_checkout_link(
+        top.option,
+        origin=request.origin,
+        destination=request.destination,
+        departure_date=request.departure_date,
+        departure_time=request.departure_time,
+    )
 
     expires_at = None
     if checkout.get("expires_at"):

@@ -1,4 +1,5 @@
 from datetime import datetime
+from urllib.parse import parse_qs, urlparse
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -114,10 +115,18 @@ async def test_get_checkout_link_train():
         duration_minutes=155,
         price=59.90,
     )
-    result = await get_checkout_link(option)
+    result = await get_checkout_link(
+        option,
+        origin="Berlin",
+        destination="Munich",
+        departure_date="2026-03-15",
+        departure_time="10:00",
+    )
     assert "checkout_url" in result
     assert "expires_at" in result
     assert result["checkout_url"].startswith("https://")
+    assert "so=Berlin" in result["checkout_url"]
+    assert "zo=Munich" in result["checkout_url"]
     assert result["expires_at"] != ""
 
 
@@ -131,7 +140,18 @@ async def test_get_checkout_link_expiry():
         duration_minutes=150,
         price=52.60,
     )
-    result = await get_checkout_link(option)
+    result = await get_checkout_link(
+        option,
+        origin="Paris",
+        destination="Lyon",
+        departure_date="2026-03-15",
+        departure_time="10:00",
+    )
+    parsed = urlparse(result["checkout_url"])
+    query = parse_qs(parsed.query)
+    assert parsed.netloc == "www.sncf-connect.com"
+    assert query["origin"] == ["Paris"]
+    assert query["destination"] == ["Lyon"]
     expires = datetime.fromisoformat(result["expires_at"])
     now = datetime.utcnow()
     diff_minutes = (expires - now).total_seconds() / 60
@@ -150,5 +170,11 @@ async def test_get_checkout_link_deep_link():
         price=56.99,
         details="https://www.omio.com/booking/12345",
     )
-    result = await get_checkout_link(option)
+    result = await get_checkout_link(
+        option,
+        origin="Berlin",
+        destination="Munich",
+        departure_date="2026-03-15",
+        departure_time="10:00",
+    )
     assert result["checkout_url"] == "https://www.omio.com/booking/12345"
