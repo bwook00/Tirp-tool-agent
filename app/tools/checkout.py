@@ -1,7 +1,5 @@
 import logging
-import uuid
 from datetime import datetime, timedelta
-from urllib.parse import quote
 
 from app.models.schemas import TransitOption, TransportType
 
@@ -12,8 +10,8 @@ _BOOKING_URLS: dict[str, str] = {
     "Deutsche Bahn": "https://www.bahn.de/buchung/start",
     "DB": "https://www.bahn.de/buchung/start",
     "ICE": "https://www.bahn.de/buchung/start",
-    "SNCF": "https://www.sncf-connect.com/en-en/train-booking",
-    "TGV": "https://www.sncf-connect.com/en-en/train-booking",
+    "SNCF": "https://www.sncf-connect.com/en-en",
+    "TGV": "https://www.sncf-connect.com/en-en",
     "OUIGO": "https://www.ouigo.com/en/search",
     "Trenitalia": "https://www.trenitalia.com/en/buying-your-ticket.html",
     "Frecciarossa": "https://www.trenitalia.com/en/buying-your-ticket.html",
@@ -54,13 +52,13 @@ async def get_checkout_link(option: TransitOption) -> dict:
         if option.details and option.details.startswith("http"):
             checkout_url = option.details
         else:
-            base_url = _BOOKING_URLS.get(
+            # Do not append synthetic query params.
+            # Some providers (e.g. SNCF Connect) return "Page not found"
+            # for unknown query combinations.
+            checkout_url = _BOOKING_URLS.get(
                 option.provider,
                 _default_url(option.transport_type),
             )
-            booking_ref = uuid.uuid4().hex[:12]
-            dep_str = option.departure_time.strftime("%Y%m%dT%H%M")
-            checkout_url = f"{base_url}?ref={booking_ref}&dep={quote(dep_str)}"
 
         expires_at = datetime.utcnow() + timedelta(minutes=_CHECKOUT_EXPIRY_MINUTES)
 
