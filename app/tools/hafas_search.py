@@ -4,6 +4,7 @@ Free, no API key required, covers most European rail + bus routes.
 Endpoint: https://v6.db.transport.rest
 """
 
+import asyncio
 import logging
 from datetime import datetime
 
@@ -16,6 +17,10 @@ logger = logging.getLogger(__name__)
 _BASE_URL = "https://v6.db.transport.rest"
 _TIMEOUT = 20
 _MAX_RESULTS = 10
+_PROFILE = "db"
+_RETRY_ATTEMPTS = 3
+_RETRY_BACKOFF_SECONDS = 0.8
+_RETRY_STATUS_CODES = {429, 500, 502, 503, 504}
 
 # Korean → English city name mapping (HAFAS only understands Latin names)
 _CITY_TRANSLATE: dict[str, str] = {
@@ -162,11 +167,18 @@ async def _resolve_location(query: str) -> str | None:
         return _location_cache[query]
 
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        resp = await client.get(
+        resp = await _get_with_retries(
+            client,
             f"{_BASE_URL}/locations",
-            params={"query": query, "results": 1, "stops": True, "addresses": False, "poi": False},
+            params={
+                "query": query,
+                "results": 1,
+                "stops": True,
+                "addresses": False,
+                "poi": False,
+                "profile": _PROFILE,
+            },
         )
-        resp.raise_for_status()
         data = resp.json()
 
     if not data:
@@ -188,7 +200,8 @@ async def _fetch_journeys(
 ) -> list[TransitOption]:
     """Fetch journeys from the HAFAS API and parse into TransitOption list."""
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        resp = await client.get(
+        resp = await _get_with_retries(
+            client,
             f"{_BASE_URL}/journeys",
             params={
                 "from": from_id,
@@ -196,9 +209,9 @@ async def _fetch_journeys(
                 "departure": departure,
                 "results": _MAX_RESULTS,
                 "tickets": True,
+                "profile": _PROFILE,
             },
         )
-        resp.raise_for_status()
         data = resp.json()
 
     options: list[TransitOption] = []
@@ -281,3 +294,45 @@ def _parse_journey(journey: dict) -> TransitOption | None:
         transfers=transfers,
         details=details,
     )
+
+
+async def _get_with_retries(
+    client: httpx.AsyncClient,
+    url: str,
+    params: dict,
+) -> httpx.Response:
+    """GET with retry for transient upstream failures."""
+    last_exc: Exception | None = None
+
+    for attempt in range(1, _RETRY_ATTEMPTS + 1):
+        try:
+            resp = await client.get(url, params=params)
+            if resp.status_code in _RETRY_STATUS_CODES and attempt < _RETRY_ATTEMPTS:
+                logger.warning(
+                    "HAFAS transient status %s on %s (attempt %s/%s), retrying",
+                    resp.status_code,
+                    url,
+                    attempt,
+                    _RETRY_ATTEMPTS,
+                )
+                await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+                continue
+
+            resp.raise_for_status()
+            return resp
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError) as exc:
+            last_exc = exc
+            if attempt >= _RETRY_ATTEMPTS:
+                raise
+            logger.warning(
+                "HAFAS request error on %s (attempt %s/%s): %s",
+                url,
+                attempt,
+                _RETRY_ATTEMPTS,
+                exc,
+            )
+            await asyncio.sleep(_RETRY_BACKOFF_SECONDS * attempt)
+
+    if last_exc:
+        raise last_exc
+    raise RuntimeError("HAFAS request failed without response")
