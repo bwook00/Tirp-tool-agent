@@ -115,18 +115,20 @@ async def test_get_checkout_link_train():
         duration_minutes=155,
         price=59.90,
     )
-    result = await get_checkout_link(
-        option,
-        origin="Berlin",
-        destination="Munich",
-        departure_date="2026-03-15",
-        departure_time="10:00",
-    )
+    with patch("app.tools.checkout._resolve_db_stop_name", new_callable=AsyncMock) as mock_db_resolve:
+        mock_db_resolve.side_effect = ["Berlin Hbf", "Muenchen Hbf"]
+        result = await get_checkout_link(
+            option,
+            origin="Berlin",
+            destination="Munich",
+            departure_date="2026-03-15",
+            departure_time="10:00",
+        )
     assert "checkout_url" in result
     assert "expires_at" in result
     assert result["checkout_url"].startswith("https://")
-    assert "so=Berlin" in result["checkout_url"]
-    assert "zo=Munich" in result["checkout_url"]
+    assert "so=Berlin+Hbf" in result["checkout_url"]
+    assert "zo=Muenchen+Hbf" in result["checkout_url"]
     assert result["expires_at"] != ""
 
 
@@ -178,3 +180,33 @@ async def test_get_checkout_link_deep_link():
         departure_time="10:00",
     )
     assert result["checkout_url"] == "https://www.omio.com/booking/12345"
+
+
+@pytest.mark.asyncio
+async def test_get_checkout_link_flix_uses_resolved_ids():
+    option = TransitOption(
+        transport_type=TransportType.bus,
+        provider="FlixBus",
+        departure_time=datetime(2026, 3, 15, 10, 0),
+        arrival_time=datetime(2026, 3, 15, 12, 30),
+        duration_minutes=150,
+        price=22.50,
+    )
+    with patch("app.tools.checkout._resolve_flix_ids", new_callable=AsyncMock) as mock_flix:
+        mock_flix.return_value = {
+            "departure_city": "40de8964-8646-11e6-9066-549f350fcb0c",
+            "arrival_city": "40de3026-8646-11e6-9066-549f350fcb0c",
+            "departure_station": "7f6214cd-95d7-4bbf-8283-55af226fa33a",
+            "arrival_station": "dcbc827f-9603-11e6-9066-549f350fcb0c",
+        }
+        result = await get_checkout_link(
+            option,
+            origin="Paris",
+            destination="Basel",
+            departure_date="2026-03-03",
+            departure_time="08:00",
+        )
+
+    assert "shop.global.flixbus.com/search" in result["checkout_url"]
+    assert "departureCity=40de8964-8646-11e6-9066-549f350fcb0c" in result["checkout_url"]
+    assert "arrivalCity=40de3026-8646-11e6-9066-549f350fcb0c" in result["checkout_url"]
